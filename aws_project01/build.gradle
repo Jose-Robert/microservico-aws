@@ -1,0 +1,73 @@
+buildscript {
+	ext {
+		springBootVersion = '2.4.0-SNAPSHOT'
+	}
+	repositories {
+		mavenCentral()
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath('gradle.plugin.com.palantir.gradle.docker:gradle-docker:0.22.1')
+	}
+
+}
+
+plugins {
+	id 'org.springframework.boot' version '2.4.0-SNAPSHOT'
+	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+	id 'java'
+	id 'com.palantir.docker' version '0.22.1'
+}
+
+group = 'siecola'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '15'
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	compile group: 'com.amazonaws', name: 'aws-java-sdk-sns', version: '1.11.887'
+	compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.887'
+
+	compile group: 'com.amazonaws', name: 'aws-java-sdk-sqs', version: '1.11.887'
+	compile group: 'com.amazonaws', name: 'amazon-sqs-java-messaging-lib', version: '1.0.8'
+	compile group: 'org.springframework', name: 'spring-jms', version: '5.2.9.RELEASE'
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	compile group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '2.7.0'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+bootJar {
+	baseName = 'curso_aws_project01'
+	version =  '1.7.0'
+	mainClassName = "br.com.siecola.aws_project01.AwsProject01Application"
+}
+
+task unpack(type: Copy) {
+	dependsOn bootJar
+	from(zipTree(tasks.bootJar.outputs.files.singleFile))
+	into("build/dependency")
+}
+docker {
+	name "${project.group}/${bootJar.baseName}"
+	tags "${bootJar.version}"
+	copySpec.from(tasks.unpack.outputs).into("dependency")
+	buildArgs(['DEPENDENCY': "dependency"])
+}
+
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
+}
+
+test {
+	useJUnitPlatform()
+}
